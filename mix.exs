@@ -20,8 +20,7 @@ defmodule OpenTok.Mixfile do
       applications: [
         :logger,
         :jose,
-        :httpoison,
-        :httpotion
+        :mint
       ]
     ]
   end
@@ -39,9 +38,9 @@ defmodule OpenTok.Mixfile do
     [
       {:jose, "~> 1.8"},
       {:poison, "~> 3.0"},
-      {:hackney, ">= 1.10.1"},
-      {:httpoison, "~> 1.4"},
-      {:httpotion, ">= 3.0.2"}
+      {:mint, "~> 1.0"},
+      {:castore, "~> 0.1"},
+      {:tesla, "~> 1.3.0"}
     ]
   end
 end

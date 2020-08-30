@@ -4,7 +4,10 @@ defmodule OpenTok do
   """
 
   require Logger
-  use HTTPoison.Base
+
+  use Tesla
+  plug(Tesla.Middleware.Headers, [{"Accept", "application/json"}])
+  plug(Tesla.Middleware.JSON, engine: Poison)
 
   @type opentok_response() :: {:json, map()} | {:error, Exception.t()}
 
@@ -20,18 +23,14 @@ defmodule OpenTok do
 
   @doc """
   Create new WebRTC session.
-
-  We have to use `HTTPotion` in this case, because
-  for some weird reason it's impossible to sent request without
-  Content-Type in `hackney` which is the low-level driver for `HTTPoison`
-  and it's a requirement for this specific OpenTok call.
   """
   @spec session_create(project_config()) :: opentok_response()
   def session_create(config) do
-    response =
-      HTTPotion.post(
+    {:ok, response} =
+      post(
         @endpoint <> "/session/create",
-        headers: ["X-OPENTOK-AUTH": jwt(config), Accept: "application/json"]
+        nil,
+        headers: [{"X-OPENTOK-AUTH", jwt(config)}]
       )
 
     opentok_process_response(response)
@@ -90,16 +89,11 @@ defmodule OpenTok do
     jwt
   end
 
-  def process_url(url) do
-    @endpoint <> url
-  end
-
-  @spec opentok_process_response(%HTTPoison.Response{} | %HTTPotion.Response{}) :: opentok_response()
+  @spec opentok_process_response(Tesla.Env.t()) :: opentok_response()
   defp opentok_process_response(response) do
     case response do
-      %{status_code: 200, body: body} ->
-        json = Poison.decode!(body)
-        {:json, json}
+      %{status: 200, body: body} ->
+        {:json, body}
 
       _ ->
         Logger.error(fn -> "OpenTok query: #{inspect(response)}" end)
