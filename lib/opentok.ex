@@ -54,9 +54,17 @@ defmodule OpenTok do
       :crypto.strong_rand_bytes(16)
       |> Base.encode16()
 
-    data_string =
-      "session_id=#{session_id}&create_time=#{ts}&role=#{role}&nonce=#{nonce}"
-      |> data_string(expire_time, connection_data)
+    data = [
+      role: role,
+      session_id: session_id,
+      create_time: ts,
+      nonce: nonce
+    ]
+
+    data = if expire_time, do: data ++ [expire_time: expire_time], else: data
+    data = if connection_data, do: data ++ [connection_data: connection_data], else: data
+
+    data_string = URI.encode_query(data)
 
     signature = sign_string(data_string, api_secret)
 
@@ -112,29 +120,10 @@ defmodule OpenTok do
   defp jose_jwk({mod, fun, args}, config), do: jose_jwk(:erlang.apply(mod, fun, args), config)
   defp jose_jwk(nil, config), do: jose_jwk(Map.fetch!(config, :api_secret), config)
 
-  @spec data_string(String.t(), nil | String.t(), nil | String.t()) :: String.t()
-  defp data_string(string, nil, nil) do
-    string
-  end
-
-  defp data_string(string, expire_time, nil) do
-    string <> "&expire_time=#{expire_time}"
-  end
-
-  defp data_string(string, nil, connection_data) do
-    string <> "&connection_data=#{URI.encode(connection_data)}"
-  end
-
-  defp data_string(string, expire_time, connection_data) do
-    string
-    |> data_string(expire_time, nil)
-    |> data_string(nil, connection_data)
-  end
-
   @spec sign_string(String.t(), String.t()) :: String.t()
   defp sign_string(string, secret) do
     :sha
     |> :crypto.hmac(secret, string)
-    |> Base.encode16()
+    |> Base.encode16(case: :lower)
   end
 end
